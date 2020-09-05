@@ -4,27 +4,33 @@ import { BrowserRouter as Router, Route, Link, Switch } from "react-router-dom";
 import { Button, Divider, Header, Container } from "semantic-ui-react";
 
 import { apiBaseUrl } from "./constants";
-import { useStateValue } from "./state";
-import { Patient } from "./types";
+import { useStateValue, setPatientList, setDiagnoses } from "./state";
+import { Patient, Diagnosis } from "./types";
 
 import PatientListPage from "./PatientListPage";
+import PatientPage from "./PatientPage/PatientPage";
 
 const App: React.FC = () => {
   const [, dispatch] = useStateValue();
+  // runs after render, so PatientPage sends requests first if bookmarking /:id route
   React.useEffect(() => {
     axios.get<void>(`${apiBaseUrl}/ping`);
 
-    const fetchPatientList = async () => {
+    const fetchPatientsAndDiagnoses = async () => {
       try {
         const { data: patientListFromApi } = await axios.get<Patient[]>(
           `${apiBaseUrl}/patients`
         );
-        dispatch({ type: "SET_PATIENT_LIST", payload: patientListFromApi });
+        const { data: diagnoseListFromApi } = await axios.get<Diagnosis[]>(
+          `${apiBaseUrl}/diagnoses`
+        );
+        dispatch(setPatientList(patientListFromApi));
+        dispatch(setDiagnoses(diagnoseListFromApi));
       } catch (e) {
         console.error(e);
       }
     };
-    fetchPatientList();
+    fetchPatientsAndDiagnoses();
   }, [dispatch]);
 
   return (
@@ -35,9 +41,12 @@ const App: React.FC = () => {
           <Button as={Link} to="/" primary>
             Home
           </Button>
-          <Divider hidden />
+          <Divider hidden/>
           <Switch>
-            <Route path="/" render={() => <PatientListPage />} />
+            <Route path="/" exact render={() => <PatientListPage />} />
+            <Route path="/:id">
+              <PatientPage />
+            </Route>
           </Switch>
         </Container>
       </Router>
